@@ -4,6 +4,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 #DATABASE_URL = "postgresql+asyncpg://user:password@localhost/production_db"
 DATABASE_URL = "postgresql+asyncpg://fastapi_user:secret_password@db/fastapi_db"
 
+#DATABASE_URL = "postgresql+asyncpg://fastapi_user:secret_password@localhost:5432/fastapi_db"
+
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
