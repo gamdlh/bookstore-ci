@@ -1,41 +1,48 @@
 name: CI with Docker Compose
 
 on:
-    pull_request:
-        branches:
-            - main
-    push:
-        branches:
-            - main
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        
-        steps:
-          - name: Setup PostgreSQL with PostgreSQL extensions and unprivileged user
-          # You may pin to the exact commit or the version.
-          # uses: Daniel-Marynicz/postgresql-action@79215751c10f38d037032a85feebba06c1c13968
-            uses: Daniel-Marynicz/postgresql-action@1.0.0
-            with:
-            # Docker postgres image tag for available image tags please see https://hub.docker.com/_/postgres
-              postgres_image_tag: 13 # optional, default is latest
-              # APP_USER - unprivileged postgres user
-              app_user: fastapi_user # optional, default is app
-              # APP_PASSWORD_USER - password for unprivileged postgres user
-              app_user_password: secret_password # optional, default is app
-              # APP_DB - database or list of databases separated by space for unprivileged postgres user
-              app_db: fastapi_db 
-            # Step 1: Check out the code
-          
-          - name: Checkout repository
-            uses: actions/checkout@v3
-            
-            #Step 2: Set up Docker Compose
-          - name: Start services with Docker Compose
-            run: docker compose up --build --abort-on-container-exit
-            
-            #Step 3: Tear down services
-          - name: Stop and clean up Docker Compose
-            if: always()
-            run: docker compose down
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Start services
+      - name: Start services with Docker Compose
+        run: docker compose up --build -d
+
+      # Step 3: Debug Database Initialization
+      - name: Verify Database Initialization
+        run: docker compose exec db psql -U fastapi_user -d fastapi_db -c '\l'
+
+      # Step 4: Wait for services to be ready
+      - name: Wait for Database
+        run: |
+          until docker compose exec db pg_isready -U fastapi_user; do
+            echo "Waiting for database..."
+            sleep 5
+          done
+
+      # Step 5: Debug Database Logs
+      - name: Debug Database Logs
+        if: always()
+        run: docker compose logs db
+
+      # Step 6: Run tests
+      - name: Run tests in the container
+        run: docker compose exec app pytest tests/
+
+      # Step 7: Stop and clean up Docker Compose
+      - name: Stop and clean up Docker Compose
+        if: always()
+        run: docker compose down
