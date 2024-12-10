@@ -1,0 +1,13 @@
+
+
+jobs:
+    test:
+        steps:
+            # Step 2: Set up Docker Compose 
+            - name: Start Services with Docker compose
+              run: docker compose up --build --abort-on-container-exit
+
+            # Step 3: Tear down services
+            - name: Stop and clean up Docker Compose
+              if: always()
+              run: docker compose down
